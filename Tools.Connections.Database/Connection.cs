@@ -1,25 +1,27 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Data;
-using System.Data.SqlClient;
+using System.Data.Common;
 using System.Text;
 
 namespace Tools.Connections.Database
 {
     public class Connection
     {
+        private readonly DbProviderFactory _providerFactory;
         private readonly string _connectionString;
 
-        public Connection(string connectionString)
+        public Connection(DbProviderFactory providerFactory, string connectionString)
         {
+            _providerFactory = providerFactory;
             _connectionString = connectionString;
         }
 
         public int ExecuteNonQuery(Command command)
         {
-            using (SqlConnection dbConnection = CreateConnection())
+            using (DbConnection dbConnection = CreateConnection())
             {
-                using (SqlCommand dbCommand = CreateCommand(command, dbConnection))
+                using (DbCommand dbCommand = CreateCommand(command, dbConnection))
                 {
                     dbConnection.Open();
 
@@ -30,13 +32,13 @@ namespace Tools.Connections.Database
 
         public IEnumerable<TResult> ExecuteReader<TResult>(Command command, Func<IDataRecord, TResult> selector)
         {
-            using (SqlConnection dbConnection = CreateConnection())
+            using (DbConnection dbConnection = CreateConnection())
             {
-                using (SqlCommand dbCommand = CreateCommand(command, dbConnection))
+                using (DbCommand dbCommand = CreateCommand(command, dbConnection))
                 {
                     dbConnection.Open();
 
-                    using(SqlDataReader dbDataReader = dbCommand.ExecuteReader())
+                    using(DbDataReader dbDataReader = dbCommand.ExecuteReader())
                     {
                         while(dbDataReader.Read())
                         {
@@ -49,9 +51,9 @@ namespace Tools.Connections.Database
 
         public object ExecuteScalar(Command command)
         {
-            using (SqlConnection dbConnection = CreateConnection())
+            using (DbConnection dbConnection = CreateConnection())
             {
-                using (SqlCommand dbCommand = CreateCommand(command, dbConnection))
+                using (DbCommand dbCommand = CreateCommand(command, dbConnection))
                 {
                     dbConnection.Open();
                     object o = dbCommand.ExecuteNonQuery();
@@ -62,11 +64,11 @@ namespace Tools.Connections.Database
 
         public DataTable GetDataTable(Command command)
         {
-            using (SqlConnection dbConnection = CreateConnection())
+            using (DbConnection dbConnection = CreateConnection())
             {
-                using (SqlCommand dbCommand = CreateCommand(command, dbConnection))
+                using (DbCommand dbCommand = CreateCommand(command, dbConnection))
                 {
-                    using (SqlDataAdapter dbDataAdapter = new SqlDataAdapter())
+                    using (DbDataAdapter dbDataAdapter = _providerFactory.CreateDataAdapter())
                     {
                         dbDataAdapter.SelectCommand = dbCommand;
                         DataTable dataTable = new DataTable();
@@ -77,17 +79,17 @@ namespace Tools.Connections.Database
             }
         }
 
-        private SqlConnection CreateConnection()
+        private DbConnection CreateConnection()
         {
-            SqlConnection dbConnection = new SqlConnection();
+            DbConnection dbConnection = _providerFactory.CreateConnection();
             dbConnection.ConnectionString = _connectionString;
 
             return dbConnection;
         }
 
-        private SqlCommand CreateCommand(Command command, SqlConnection dbConnection)
+        private static DbCommand CreateCommand(Command command, DbConnection dbConnection)
         {
-            SqlCommand dbCommand = dbConnection.CreateCommand();
+            DbCommand dbCommand = dbConnection.CreateCommand();
             dbCommand.CommandText = command.Query;
 
             if (command.IsStoredProcedure)
@@ -95,7 +97,7 @@ namespace Tools.Connections.Database
 
             foreach (KeyValuePair<string, object> kvp in command.Parameters)
             {
-                SqlParameter dbParameter = new SqlParameter();
+                DbParameter dbParameter = dbCommand.CreateParameter();
                 dbParameter.ParameterName = kvp.Key;
                 dbParameter.Value = kvp.Value;
 
