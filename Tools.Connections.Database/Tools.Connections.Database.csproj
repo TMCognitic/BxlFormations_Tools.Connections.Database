@@ -2,6 +2,11 @@
 
   <PropertyGroup>
     <TargetFramework>netstandard2.0</TargetFramework>
+    <Authors>Morre Thierry</Authors>
+    <Company>Cognitic / Bstorm</Company>
+    <Description>Classe de connexions aux bases de données utilisant le design pattern 'abastract factory'</Description>
+    <Copyright>Cognitic/BStorm 2021</Copyright>
+    <Version>1.0.1</Version>
   </PropertyGroup>
 
 </Project>
